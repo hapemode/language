@@ -1,7 +1,12 @@
 package com.ppx.service.impl;
 
+import com.alibaba.excel.EasyExcel;
+import com.alibaba.excel.util.MapUtils;
+import com.alibaba.excel.write.style.column.LongestMatchColumnWidthStyleStrategy;
+import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ppx.common.base.BaseResult;
+import com.ppx.common.listener.UploadDataListener;
 import com.ppx.entity.BO.FiftyToneBO;
 import com.ppx.entity.FiftyTone;
 import com.ppx.mapper.FiftyToneMapper;
@@ -12,8 +17,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletResponse;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 /**
@@ -29,11 +36,40 @@ public class FiftyToneServiceImpl extends ServiceImpl<FiftyToneMapper, FiftyTone
 
     @Override
     public void importData(MultipartFile file) {
-
+        try {
+            // TODO: 2022/11/17 待验证
+            EasyExcel.read(file.getInputStream(), FiftyTone.class, new UploadDataListener(this)).sheet().doRead();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
     public void export(HttpServletResponse response) {
+        List<FiftyTone> list = query().list();
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setCharacterEncoding("utf-8");
+        try {
+            String fileName = URLEncoder.encode("日语五十音", "UTF-8")
+                    .replaceAll("\\+", "%20");
+            response.setHeader("Content-disposition", "attachment;filename*=utf-8''" + fileName + ".xlsx");
+            EasyExcel.write(response.getOutputStream(), FiftyToneBO.class)
+                    .registerWriteHandler(new LongestMatchColumnWidthStyleStrategy())
+                    .sheet("模板").doWrite(list);
+        } catch (Exception e) {
+            response.reset();
+            response.setContentType("application/json");
+            response.setCharacterEncoding("utf-8");
+            Map<String, String> map = MapUtils.newHashMap();
+            map.put("status", "failure");
+            map.put("message", "下载文件失败" + e.getMessage());
+            try {
+                response.getWriter().println(JSON.toJSONString(map));
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+            e.printStackTrace();
+        }
 
     }
 
