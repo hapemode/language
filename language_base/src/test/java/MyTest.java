@@ -16,5 +16,6 @@ public class MyTest {
 
     @Test
     public void t1(){
+        System.out.println("GG");
     }
 }
