@@ -15,4 +15,6 @@ public interface UserService extends IService<User> {
     BaseResult logout(UserReq req);
 
     BaseResult register(UserReq req);
+
+    void doo(int i1, int count);
 }

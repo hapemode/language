@@ -15,7 +15,9 @@ public class MyTest {
     private UserService userService;
 
     @Test
-    public void t1(){
-        System.out.println("GG");
+    public void t1() {
+        for (int i = 0; i < 2; i++) {
+            userService.doo(i,0);
+        }
     }
 }

@@ -3,22 +3,29 @@ package com.ppx.service.impl;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ppx.common.base.BaseResult;
 import com.ppx.common.constant.UserConstant;
+import com.ppx.entity.Reason;
 import com.ppx.entity.User;
 import com.ppx.mapper.UserMapper;
 import com.ppx.request.UserReq;
+import com.ppx.service.ReasonService;
 import com.ppx.service.UserService;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import javax.annotation.Resource;
 import java.util.UUID;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 /**
  * @Author: hape
  * @Date: 2022/11/17 10:02
  */
+@Slf4j
 @Service
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 
@@ -63,4 +70,43 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             return BaseResult.getSuccessResult();
         }
     }
+
+//    @Async("AsyncExecutor")
+
+    @Resource
+    private Executor asyncExecutor;
+
+    @Autowired
+    private ReasonService reasonService;
+
+    @Override
+    @Transactional
+    public void doo(int i, int count) {
+        asyncExecutor.execute(() -> {
+            System.out.println("当前线程=====>" + Thread.currentThread().getName());
+            User user = new User(i, "ppx", "ss");
+            Reason reason = new Reason();
+            try {
+                save(user);
+                reason.setId(i);
+                reason.setUserId(user.getId());
+                reason.setStatus("1");
+                if (i == 1) {
+                    int a = 1 / 0;
+                }
+            } catch (Exception e) {
+                reason.setStatus("0");
+                if (count >= 3) {
+                    log.error("重试次数耗尽");
+                    e.printStackTrace();
+                } else {
+                    log.info("重试===>" + count + 1);
+                    doo(i, count + 1);
+                }
+            } finally {
+                reasonService.save(reason);
+            }
+        });
+    }
+
 }
